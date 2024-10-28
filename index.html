@@ -1,0 +1,97 @@
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Esri JS API</title>
+    <style>
+      html,
+      body,
+      #viewDiv {
+        padding: 0;
+        margin: 0;
+        height: 100%;
+        width: 100%;
+      }
+
+      .esri-ui-corner .esri-component.esri-widget--panel {
+        width: 200px !important;
+      }
+    </style>
+
+    <link
+      rel="stylesheet"
+      href="https://js.arcgis.com/4.30/esri/themes/light/main.css"
+    />
+    <script src="https://js.arcgis.com/4.30/"></script>
+
+    <script>
+      require([
+        "esri/WebMap",
+        "esri/views/MapView",
+        "esri/layers/FeatureLayer",
+        "esri/identity/IdentityManager",
+      ], (WebMap, MapView, FeatureLayer, esriId) => {
+        esriId.registerToken({
+          server: "https://esribelux.maps.arcgis.com/",
+          token: "PUT TOKEN HERE",
+        });
+        const webmap = new WebMap({
+          portalItem: {
+            id: "2de30102f58943e6ae6b84ed95f7d715", // id of the webmap can be found in AGE Portal
+          },
+        });
+        const view = new MapView({
+          map: webmap,
+          container: "viewDiv",
+        });
+
+        // wait for the webmap to be fully loaded
+        webmap.when(() => {
+          // map over all the available layers on the webmap
+          webmap.allLayers.map((layer) => {
+            // here we can access every layer present on the map
+            // only the Feature Layers are of interest for us, other layers are basemap layers, group layers etc..
+            if (layer.declaredClass === "esri.layers.FeatureLayer") {
+              layer
+                .queryFeatures({
+                  // return all fields, if you only need one field you can specify it here.
+                  outFields: ["*"],
+                  // where clause that is always true to return all features in the layer
+                  where: "1=1",
+                  // returns the geometry of the features
+                  returnGeometry: true,
+                  // order by fields
+                  orderByFields: ["OBJECTID DESC"],
+                })
+                .then((queryResult) => {
+                  console.log({
+                    // name of layer
+                    layer: layer.title,
+                    // the result of the query
+                    queryResult,
+                    // the attributes of the features
+                    features: queryResult.features.map(
+                      (feature) => feature.attributes
+                    ),
+                    // the geometry of the features
+                    geometry: queryResult.features.map(
+                      (feature) => feature.geometry
+                    ),
+                    // the fields of the features
+                    fields: queryResult.fields.map((field) => field.name),
+                  });
+                });
+            }
+          });
+        });
+      });
+    </script>
+  </head>
+
+  <body>
+    <div id="viewDiv"></div>
+  </body>
+</html>
