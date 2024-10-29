@@ -33,7 +33,9 @@
         "esri/views/MapView",
         "esri/layers/FeatureLayer",
         "esri/identity/IdentityManager",
-      ], (WebMap, MapView, FeatureLayer, esriId) => {
+        "esri/widgets/Editor",
+        "esri/Graphic",
+      ], (WebMap, MapView, FeatureLayer, esriId, Editor, Graphic) => {
         // by using this, the token will be automatically injected in every call using the arcgis js api
         esriId.registerToken({
           server: "https://esribelux.maps.arcgis.com/",
@@ -49,6 +51,7 @@
           container: "viewDiv",
         });
 
+        // EXAMPLE 1
         // Here we are doing a query on the layers present on the webmap
 
         // wait for the webmap to be fully loaded
@@ -95,6 +98,8 @@
           });
         });
 
+        // EXAMPLE 2
+        // Here we are doing a query using the url of a specefic layer and the arcgis js api
         const pointLayer = new FeatureLayer({
           url: "https://services.arcgis.com/1WXsSdZFzziTTcic/arcgis/rest/services/MOW_DEMO/FeatureServer/0",
         });
@@ -104,6 +109,7 @@
             // return all fields, if you only need one field you can specify it here.
             outFields: ["*"],
             // where clause that is always true to return all features in the layer
+            // This is just sql, another example would be : file_name LIKE '%.pdf' to return all features with .pdf in the filename
             where: "1=1",
             // returns the geometry of the features
             returnGeometry: true,
@@ -131,6 +137,7 @@
             });
           });
 
+        // EXAMPLE 3
         // here is an example without using the arcgis js api, but a REST api call  (url of service + /query + params)
         // https://developers.arcgis.com/rest/services-reference/enterprise/query-feature-service-layer/
         console.log(
@@ -142,6 +149,90 @@
           .then((response) => response.json())
           .then((data) => console.log(data))
           .catch((error) => console.error("Error:", error));
+
+        // EXAMPLE 1 EDITING
+        // Add new features with the editor widget
+        const editor = new Editor({
+          view: view,
+        });
+        // Add widget to the view
+        view.ui.add(editor, "top-right");
+
+        // EXAMPLE 2 EDITING
+        // add new features using the arcgis js api
+
+        // check the following link for the creation of other types of geometries (polygon, line)
+        // https://developers.arcgis.com/javascript/latest/tutorials/add-a-point-line-and-polygon/#add-a-point-graphic
+        const point = {
+          //Create a point,
+          type: "point",
+          longitude: -118.80657463861,
+          latitude: 34.0005930608889,
+        };
+
+        let addedOID = null;
+
+        pointLayer
+          .applyEdits({
+            addFeatures: [
+              new Graphic({
+                geometry: point,
+                attributes: {
+                  owner: "Joe Smith",
+                  file_name: "sluis.pdf",
+                },
+              }),
+            ],
+          })
+          .then((result) => {
+            console.log({ result });
+            addedOID = result.addFeatureResults[0]?.objectId;
+
+            console.log({ addedOID });
+
+            // EXAMPLE 3 EDITING / UPDATE FEATURE
+            // We update the feature we just created, note that we use the updateFeatures param and added the
+            // addedOID to specify which feature we want to update
+            if (addedOID) {
+              pointLayer
+                .applyEdits({
+                  updateFeatures: [
+                    new Graphic({
+                      geometry: point,
+                      attributes: {
+                        objectId: addedOID,
+                        owner: "Another dude",
+                        file_name: "sluis.pdf",
+                      },
+                    }),
+                  ],
+                })
+                .then((result) => {
+                  console.log({ result });
+
+                  // EXAMPLE 4 EDITING / DELETE FEATURE
+                  // Just specify the objectid of the feature you want to delete
+                  if (addedOID) {
+                    pointLayer
+                      .applyEdits({
+                        deleteFeatures: [addedOID],
+                      })
+                      .then((result) => {
+                        console.log({ result });
+                      })
+                      .catch((error) => {
+                        console.log(error);
+                      });
+                  }
+                })
+                .catch((error) => {
+                  console.log(error);
+                });
+            }
+          })
+          .catch((error) => {
+            console.log(error);
+          });
       });
     </script>
   </head>
