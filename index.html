@@ -34,6 +34,7 @@
         "esri/layers/FeatureLayer",
         "esri/identity/IdentityManager",
       ], (WebMap, MapView, FeatureLayer, esriId) => {
+        // by using this, the token will be automatically injected in every call using the arcgis js api
         esriId.registerToken({
           server: "https://esribelux.maps.arcgis.com/",
           token: "PUT TOKEN HERE",
@@ -48,9 +49,12 @@
           container: "viewDiv",
         });
 
+        // Here we are doing a query on the layers present on the webmap
+
         // wait for the webmap to be fully loaded
         webmap.when(() => {
           // map over all the available layers on the webmap
+
           webmap.allLayers.map((layer) => {
             // here we can access every layer present on the map
             // only the Feature Layers are of interest for us, other layers are basemap layers, group layers etc..
@@ -67,6 +71,9 @@
                   orderByFields: ["OBJECTID DESC"],
                 })
                 .then((queryResult) => {
+                  console.log(
+                    "==============Example Querying features present on map ========================"
+                  );
                   console.log({
                     // name of layer
                     layer: layer.title,
@@ -87,6 +94,54 @@
             }
           });
         });
+
+        const pointLayer = new FeatureLayer({
+          url: "https://services.arcgis.com/1WXsSdZFzziTTcic/arcgis/rest/services/MOW_DEMO/FeatureServer/0",
+        });
+
+        pointLayer
+          .queryFeatures({
+            // return all fields, if you only need one field you can specify it here.
+            outFields: ["*"],
+            // where clause that is always true to return all features in the layer
+            where: "1=1",
+            // returns the geometry of the features
+            returnGeometry: true,
+            // order by fields
+            orderByFields: ["OBJECTID DESC"],
+          })
+          .then((queryResult) => {
+            console.log(
+              "==============Example FeatureLayer========================"
+            );
+
+            console.log({
+              // name of layer
+              layer: pointLayer.title,
+              // the result of the query
+              queryResult,
+              // the attributes of the features
+              features: queryResult.features.map(
+                (feature) => feature.attributes
+              ),
+              // the geometry of the features
+              geometry: queryResult.features.map((feature) => feature.geometry),
+              // the fields of the features
+              fields: queryResult.fields.map((field) => field.name),
+            });
+          });
+
+        // here is an example without using the arcgis js api, but a REST api call  (url of service + /query + params)
+        // https://developers.arcgis.com/rest/services-reference/enterprise/query-feature-service-layer/
+        console.log(
+          "==============Example without arcgis js api========================"
+        );
+        fetch(
+          "https://services.arcgis.com/1WXsSdZFzziTTcic/arcgis/rest/services/MOW_DEMO/FeatureServer/0/query?where=1%3D1&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&resultType=none&distance=0.0&units=esriSRUnit_Meter&relationParam=&returnGeodetic=false&outFields=*&returnGeometry=true&f=pjson&token="
+        )
+          .then((response) => response.json())
+          .then((data) => console.log(data))
+          .catch((error) => console.error("Error:", error));
       });
     </script>
   </head>
